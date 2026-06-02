@@ -54,98 +54,124 @@ Avoid unstructured end-of-file accumulation unless the outline shows that the en
 
 ## Agent Installation
 
-`mdreader` can be used either as a native Codex skill or as a checked-out helper repo referenced by other coding agents. The script only needs Python 3 and does not require third-party packages.
+`mdreader` is packaged as a Codex skill: `SKILL.md` plus `scripts/` and optional agent metadata. Codex can load that package directly. Other coding agents usually do not load Codex skill packages natively, so install `mdreader` as a shared checkout and register a small wrapper in that agent's own skill, rule, memory, or command system.
 
-### Shared Checkout
+### Install Target Matrix
 
-Use one local checkout when an agent does not support Codex-style skills directly:
+| Agent | Native `mdreader` install | Recommended target |
+| --- | --- | --- |
+| Codex | Yes, as a skill directory | `~/.codex/skills/mdreader` |
+| Cursor | No native Codex skill loader | Shared checkout plus `.cursor/rules/mdreader.mdc` or `AGENTS.md` |
+| Claude Code | No native Codex skill loader | Shared checkout plus `~/.claude/CLAUDE.md` import or `.claude/commands/mdreader.md` |
+| Other agents | Depends on agent | Shared checkout plus that agent's instruction or skill registry |
 
-```sh
-mkdir -p ~/.local/share
-git clone https://github.com/ptlzc/mdreader.git ~/.local/share/mdreader
-```
+### Codex Native Skill
 
-If the directory already exists, update it with:
-
-```sh
-git -C ~/.local/share/mdreader pull --ff-only
-```
-
-### Codex
-
-Install as a Codex skill:
+Install directly into the Codex skills directory:
 
 ```sh
 mkdir -p ~/.codex/skills
 git clone https://github.com/ptlzc/mdreader.git ~/.codex/skills/mdreader
 ```
 
-Restart Codex after installing or updating the skill so the `mdreader` skill metadata is loaded.
-
-For source-managed Codex homes, keep the source in the repository that owns `~/.codex/skills` and sync it into the runtime home instead of editing runtime files directly.
-
-### Cursor
-
-Cursor can use `mdreader` through project instructions. For a simple project-wide setup, add an `AGENTS.md` file at the repository root:
-
-````md
-# Agent Instructions
-
-When inspecting or editing Markdown, Markdown Jinja2, or Markdown-oriented `.j2` source, use mdreader before reading or writing section content.
-
-Run outline first:
+Update:
 
 ```sh
-python3 ~/.local/share/mdreader/scripts/mdreader.py outline <file>
+git -C ~/.codex/skills/mdreader pull --ff-only
 ```
 
-Then read the exact target section:
+Restart Codex, or start a new Codex session, after installing or updating the skill.
+
+If your Codex home is generated from a source repository, install `mdreader` in that source repository and run your normal sync/installer instead of editing `~/.codex` directly.
+
+### Shared Checkout for Non-Codex Agents
+
+Create one shared source checkout:
 
 ```sh
-python3 ~/.local/share/mdreader/scripts/mdreader.py section <file> --line <line>
-python3 ~/.local/share/mdreader/scripts/mdreader.py section <file> --path "A/B/C"
+mkdir -p ~/.local/share
+git clone https://github.com/ptlzc/mdreader.git ~/.local/share/mdreader
 ```
 
-Do not append unrelated Markdown to the end of a file unless the outline shows that the file end is the correct section boundary.
-````
-
-For a Cursor Project Rule, create a rule from `Cursor Settings > Rules` or the `New Cursor Rule` command and paste the same instruction. Keep the rule scoped to Markdown files if you only want it to activate for documentation work.
-
-### Claude Code
-
-Claude Code can use `mdreader` through memory files or custom slash commands.
-
-For shared project memory, add this to `CLAUDE.md` in the project root:
-
-````md
-## Markdown Structure
-
-Before reading or editing Markdown, Markdown Jinja2, or Markdown-oriented `.j2` files, run:
+Update:
 
 ```sh
-python3 ~/.local/share/mdreader/scripts/mdreader.py outline <file>
+git -C ~/.local/share/mdreader pull --ff-only
 ```
 
-Use `section` with `--line`, `--path`, or a unique `--title` before making targeted edits. Avoid unstructured end-of-file accumulation unless the outline shows the file end is the correct section boundary.
-````
+Use this checkout when registering `mdreader` with Cursor, Claude Code, or any other agent that does not read Codex skill directories directly.
 
-For a reusable slash command, create `.claude/commands/mdreader.md`:
+### Cursor Skill Wrapper
 
-````md
+Cursor can register `mdreader` as a Project Rule. Add this file to a project:
+
+```sh
+mkdir -p .cursor/rules
+cat > .cursor/rules/mdreader.mdc <<'EOF'
+---
+description: Load the mdreader Markdown structure skill
+globs: **/*.{md,markdown,md.j2,markdown.j2,j2}
+alwaysApply: false
+---
+
+Use the mdreader skill installed at `~/.local/share/mdreader`.
+
+Skill package:
+- Instructions: `~/.local/share/mdreader/SKILL.md`
+- CLI: `python3 ~/.local/share/mdreader/scripts/mdreader.py`
+EOF
+```
+
+For agents or Cursor setups that prefer shared repository instructions, add an `AGENTS.md` file:
+
+```sh
+cat > AGENTS.md <<'EOF'
+# Agent Skills
+
+mdreader is installed at `~/.local/share/mdreader`.
+Load `~/.local/share/mdreader/SKILL.md` when working with Markdown or Markdown Jinja2 structure.
+EOF
+```
+
+### Claude Code Skill Wrapper
+
+Claude Code can load persistent instructions from `CLAUDE.md`. Register the skill globally:
+
+```sh
+mkdir -p ~/.claude
+cat >> ~/.claude/CLAUDE.md <<'EOF'
+
+## mdreader Skill
+
+Import and follow the mdreader skill instructions:
+@~/.local/share/mdreader/SKILL.md
+
+The mdreader CLI is:
+python3 ~/.local/share/mdreader/scripts/mdreader.py
+EOF
+```
+
+For a project-only install, add the same block to `./CLAUDE.md` in that repository instead.
+
+Optionally add a reusable slash command:
+
+```sh
+mkdir -p ~/.claude/commands
+cat > ~/.claude/commands/mdreader.md <<'EOF'
 ---
 allowed-tools: Bash(python3:*), Read, Grep, Glob
-description: Inspect Markdown structure with mdreader before reading or editing
+description: Load and run the mdreader Markdown structure skill
 argument-hint: <markdown-file>
 ---
 
-Run mdreader outline on `$ARGUMENTS`, inspect the heading tree, and then use mdreader section by line, path, or unique title before reading or editing content.
+Use the skill instructions at `~/.local/share/mdreader/SKILL.md`.
 
-```sh
-python3 ~/.local/share/mdreader/scripts/mdreader.py outline "$ARGUMENTS"
+Run:
+!`python3 ~/.local/share/mdreader/scripts/mdreader.py outline "$ARGUMENTS"`
+EOF
 ```
-````
 
-Then invoke it in Claude Code with:
+Then the command is available as:
 
 ```text
 /mdreader path/to/file.md
@@ -153,10 +179,17 @@ Then invoke it in Claude Code with:
 
 ### Other Agents
 
-For agents that read repository instruction files, add the same structure-first instruction to the tool's project guidance file and reference the shared checkout path:
+For any agent with a skill registry, register this package path:
 
 ```text
-Use python3 ~/.local/share/mdreader/scripts/mdreader.py outline <file> before reading or editing Markdown source. Use section selection by line, path, or unique title before targeted edits.
+~/.local/share/mdreader
+```
+
+For any agent with only project instructions, add a short entry that points to:
+
+```text
+~/.local/share/mdreader/SKILL.md
+python3 ~/.local/share/mdreader/scripts/mdreader.py
 ```
 
 ## Distribution

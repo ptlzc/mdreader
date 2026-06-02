@@ -2,13 +2,14 @@
 
 ## Summary
 
-- Added installation guidance for Codex, Cursor, Claude Code, and other coding agents.
+- Added installation and registration guidance for Codex, Cursor, Claude Code, and other coding agents.
 - Documented `~/.codex/skills/mdreader` as the native Codex skill installation path.
-- Documented `~/.local/share/mdreader` as a shared helper checkout for agents that consume project instructions rather than Codex skills.
+- Documented `~/.local/share/mdreader` as a shared checkout for agents that do not load Codex skill packages natively.
+- Documented Cursor Project Rule and Claude Code memory/slash-command wrappers.
 
 ## Agent Behavior
 
-Agents should install or reference `mdreader` once, then use its `outline` command before reading or editing Markdown, Markdown Jinja2, or Markdown-oriented `.j2` source.
+Humans should install `mdreader` once per agent environment. Codex can load the package as a native skill. Cursor, Claude Code, and other agents should register wrappers that point to the shared checkout and load `SKILL.md`.
 
 ## Validation
 
