@@ -1,0 +1,4 @@
+interface:
+  display_name: "Markdown Structure Reader"
+  short_description: "Read Markdown outlines and sections with stable line ranges"
+  default_prompt: "Use $mdreader when inspecting Markdown or Markdown Jinja2 heading structure, line numbers, section boundaries, or section content."
